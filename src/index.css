@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --font-cairo: "Cairo", sans-serif;
+  --font-orbitron: "Orbitron", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-black text-zinc-100 font-cairo overflow-x-hidden;
+    background-image: 
+      radial-gradient(circle at 50% 0%, rgba(239, 68, 68, 0.1) 0%, transparent 50%),
+      radial-gradient(circle at 100% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%),
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    background-position: 0 0, 0 0, center center, center center;
+    background-attachment: fixed;
+  }
+}
+
+/* Custom Scrollbar for Cyberpunk vibe */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(0,0,0,0.5); 
+}
+::-webkit-scrollbar-thumb {
+  background: #3b82f6; 
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #f43f5e; 
+}
