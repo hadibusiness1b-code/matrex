@@ -12,7 +12,7 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose, rates, onSave }: SettingsModalProps) {
   const [tempRates, setTempRates] = useState<Rates>(rates);
-  const [activeTab, setActiveTab] = useState<'regular' | 'vip'>('regular');
+  const [activeTab, setActiveTab] = useState<'ps4' | 'ps5' | 'fortnite'>('ps4');
 
   useEffect(() => {
     setTempRates(rates);
@@ -23,7 +23,7 @@ export function SettingsModal({ isOpen, onClose, rates, onSave }: SettingsModalP
     onClose();
   };
 
-  const handleRateChange = (category: 'regular' | 'vip', num: string, value: string) => {
+  const handleRateChange = (category: 'ps4' | 'ps5' | 'fortnite', num: string, value: string) => {
     setTempRates({
       ...tempRates,
       [category]: {
@@ -70,30 +70,40 @@ export function SettingsModal({ isOpen, onClose, rates, onSave }: SettingsModalP
             {/* Tabs */}
             <div className="flex p-4 pb-0 relative z-10 gap-2">
                <button 
-                  onClick={() => setActiveTab('regular')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${
-                    activeTab === 'regular' 
+                  onClick={() => setActiveTab('ps4')}
+                  className={`flex-1 py-3 px-2 text-xs md:text-sm md:px-4 rounded-xl font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-1 md:gap-2 ${
+                    activeTab === 'ps4' 
                     ? 'bg-blue-500/20 text-blue-400 border border-blue-500/50 shadow-[0_0_15px_rgba(59,130,246,0.3)]' 
                     : 'bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10'
                   }`}
                >
-                 <Gamepad2 className="w-4 h-4" /> العادي
+                 <Gamepad2 className="w-4 h-4 hidden md:block" /> العادي
                </button>
                <button 
-                  onClick={() => setActiveTab('vip')}
-                  className={`flex-1 py-3 px-4 rounded-xl font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${
-                    activeTab === 'vip' 
+                  onClick={() => setActiveTab('ps5')}
+                  className={`flex-1 py-3 px-2 text-xs md:text-sm md:px-4 rounded-xl font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-1 md:gap-2 ${
+                    activeTab === 'ps5' 
                     ? 'bg-red-500/20 text-red-400 border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)]' 
                     : 'bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10'
                   }`}
                >
-                 <Star className="w-4 h-4" /> الـ VIP
+                 <Star className="w-4 h-4 hidden md:block" /> PS5
+               </button>
+               <button 
+                  onClick={() => setActiveTab('fortnite')}
+                  className={`flex-1 py-3 px-2 text-xs md:text-sm md:px-4 rounded-xl font-bold tracking-widest uppercase transition-all flex items-center justify-center gap-1 md:gap-2 ${
+                    activeTab === 'fortnite' 
+                    ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]' 
+                    : 'bg-white/5 text-zinc-400 border border-white/5 hover:bg-white/10'
+                  }`}
+               >
+                 Fortnite
                </button>
             </div>
 
             {/* Body */}
             <div className="p-6 space-y-4 relative z-10">
-              {[1, 2, 3, 4].map(num => (
+              {[1, 2, 3, 4].filter(num => activeTab !== 'fortnite' || num <= 2).map(num => (
                 <div key={num} className="flex items-center justify-between bg-white/5 p-4 rounded-2xl border border-white/5 hover:border-white/20 hover:bg-white/10 transition-colors">
                   <div className="flex flex-col">
                     <span className="text-white font-bold tracking-widest text-sm uppercase">سعر الساعة</span>

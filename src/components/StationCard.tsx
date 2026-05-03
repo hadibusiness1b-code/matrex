@@ -4,6 +4,7 @@ import { Gamepad2, Plus, Receipt, User, Users, Play, Square, Coffee, Clock } fro
 import { Station, Order, Rates } from '../types';
 
 interface StationCardProps {
+  key?: string | number;
   station: Station;
   rates: Rates;
   onStartSession: (id: number, playersCount: number) => void;
@@ -54,7 +55,7 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
     if (!station.startTime) return 0;
     const end = station.endTime || currentTime;
     const durationHours = (end - station.startTime) / (1000 * 60 * 60);
-    const categoryRates = station.isPremium ? rates.vip : rates.regular;
+    const categoryRates = station.type ? rates[station.type] : rates.ps4;
     const rate = categoryRates[station.playersCount as keyof typeof categoryRates] || 0;
     return Math.floor(durationHours * rate);
   };
@@ -66,18 +67,18 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
     <motion.div 
       layout
       className={`relative flex flex-col w-full bg-black/60 backdrop-blur-xl rounded-2xl transition-all duration-300 overflow-hidden border ${
-        station.isPremium ? 'h-[560px] md:h-[600px] border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.2)]' : 'h-[520px]'
+        (station.type === 'ps5' || station.type === 'fortnite') ? 'h-[560px] md:h-[600px] border-blue-500 shadow-[0_0_40px_rgba(59,130,246,0.2)]' : 'h-[520px]'
       } ${
-        station.status === 'available' ? (station.isPremium ? 'border-blue-500/50 hover:shadow-[0_0_50px_rgba(59,130,246,0.3)] hover:border-blue-400' : 'border-white/10 hover:border-white/30 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]') :
+        station.status === 'available' ? ((station.type === 'ps5' || station.type === 'fortnite') ? 'border-blue-500/50 hover:shadow-[0_0_50px_rgba(59,130,246,0.3)] hover:border-blue-400' : 'border-white/10 hover:border-white/30 hover:shadow-[0_0_30px_rgba(255,255,255,0.05)]') :
         station.status === 'playing' ? 'border-blue-500/50 shadow-[0_0_30px_rgba(59,130,246,0.15)]' :
         'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.15)]'
       }`}
     >
       {/* Background gradients for active states and VIP */}
-      {station.isPremium && station.status === 'available' && (
+      {(station.type === 'ps5' || station.type === 'fortnite') && station.status === 'available' && (
          <div className="absolute inset-0 bg-gradient-to-b from-blue-500/10 via-transparent to-red-500/5 pointer-events-none" />
       )}
-      {station.isPremium && (
+      {(station.type === 'ps5' || station.type === 'fortnite') && (
         <>
           <div className="absolute -top-32 -right-32 w-64 h-64 bg-blue-600/20 rounded-full blur-[80px]" />
           <div className="absolute -bottom-32 -left-32 w-64 h-64 bg-red-600/10 rounded-full blur-[80px]" />
@@ -98,7 +99,7 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
       }`}>
         <div className="flex items-center gap-4">
           <div className={`p-2.5 rounded-xl ${
-            station.isPremium && station.status === 'available' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)] animate-pulse' :
+            (station.type === 'ps5' || station.type === 'fortnite') && station.status === 'available' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 shadow-[0_0_20px_rgba(59,130,246,0.2)] animate-pulse' :
             station.status === 'available' ? 'bg-white/5 text-zinc-400' :
             station.status === 'playing' ? 'bg-blue-500/20 text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.3)] animate-pulse' :
             'bg-red-500/20 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.3)]'
@@ -106,10 +107,11 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
             <Gamepad2 className="w-6 h-6" />
           </div>
           <div className="flex flex-col">
-            <h2 className={`font-orbitron font-black uppercase tracking-widest ${station.isPremium ? 'text-3xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'text-2xl text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-400'}`}>
+            <h2 className={`font-orbitron font-black uppercase tracking-widest ${(station.type === 'ps5' || station.type === 'fortnite') ? 'text-3xl text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-red-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'text-2xl text-transparent bg-clip-text bg-gradient-to-br from-white to-zinc-400'}`}>
               {station.name}
             </h2>
-            {station.isPremium && <span className="text-xs font-bold text-red-400 uppercase tracking-widest -mt-1">VIP Edition</span>}
+            {station.type === 'ps5' && <span className="text-xs font-bold text-red-400 uppercase tracking-widest -mt-1">VIP Edition</span>}
+            {station.type === 'fortnite' && <span className="text-xs font-bold text-purple-400 uppercase tracking-widest -mt-1">Fortnite Edition</span>}
           </div>
         </div>
         <div className={`px-4 py-1.5 text-xs font-bold tracking-widest rounded-full uppercase border ${
@@ -137,7 +139,7 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
               <div className="text-center w-full">
                 <p className="text-zinc-500 mb-4 text-sm tracking-widest uppercase">حدد عدد اللاعبين</p>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-white/5 p-2 rounded-2xl border border-white/5 w-full">
-                  {[1, 2, 3, 4].map(num => (
+                  {[1, 2, 3, 4].filter(num => station.type !== 'fortnite' || num <= 2).map(num => (
                     <button
                       key={num}
                       onClick={() => setPlayersSelection(num)}

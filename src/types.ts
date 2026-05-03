@@ -14,7 +14,7 @@ export interface Station {
   startTime: number | null; // Date.now() timestamp
   endTime: number | null;
   orders: Order[];
-  isPremium?: boolean;
+  type: 'ps4' | 'ps5' | 'fortnite';
 }
 
 export interface RateCategory {
@@ -25,8 +25,9 @@ export interface RateCategory {
 }
 
 export interface Rates {
-  regular: RateCategory;
-  vip: RateCategory;
+  ps4: RateCategory;
+  ps5: RateCategory;
+  fortnite: RateCategory;
 }
 
 export interface SessionLog {

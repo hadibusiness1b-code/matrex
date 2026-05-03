@@ -10,26 +10,33 @@ const STORAGE_KEY_RATES = 'matrex_rates';
 const STORAGE_KEY_LOGS = 'matrex_logs';
 
 const DEFAULT_RATES: Rates = {
-  regular: {
-    1: 5000,
+  ps4: {
+    1: 4000,
+    2: 5000,
+    3: 6000,
+    4: 7000,
+  },
+  ps5: {
+    1: 6000,
     2: 7000,
     3: 8000,
-    4: 10000,
+    4: 8000,
   },
-  vip: {
-    1: 7000,
-    2: 8000,
+  fortnite: {
+    1: 8000,
+    2: 10000,
     3: 10000,
-    4: 12000,
+    4: 10000,
   }
 };
 
 const INITIAL_STATIONS: Station[] = [
-  { id: 0, name: 'بليستيشن 5 (VIP)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], isPremium: true },
-  { id: 1, name: 'جهاز 1', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [] },
-  { id: 2, name: 'جهاز 2', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [] },
-  { id: 3, name: 'جهاز 3', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [] },
-  { id: 4, name: 'جهاز 4', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [] },
+  { id: 0, name: 'بليستيشن 5 (VIP)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'ps5' },
+  { id: 1, name: 'جهاز 1 (PS4)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'ps4' },
+  { id: 2, name: 'جهاز 2 (PS4)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'ps4' },
+  { id: 3, name: 'جهاز 3 (PS4)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'ps4' },
+  { id: 4, name: 'جهاز 4 (PS4)', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'ps4' },
+  { id: 5, name: 'Fortnite', status: 'available', playersCount: 1, startTime: null, endTime: null, orders: [], type: 'fortnite' },
 ];
 
 export default function App() {
@@ -46,18 +53,14 @@ export default function App() {
     if (savedRates) {
       try {
         const parsed = JSON.parse(savedRates);
-        if (parsed.regular && parsed.vip) {
+        if (parsed.ps4 && parsed.ps5 && parsed.fortnite) {
           setRates(parsed);
-        } else {
-          // Migration from old flat format
+        } else if (parsed.regular && parsed.vip) {
+          // Migration from old regular/vip format
           setRates({
-            regular: parsed,
-            vip: {
-              1: parsed[1] * 2 || 25000,
-              2: parsed[2] * 2 || 30000,
-              3: parsed[3] * 2 || 40000,
-              4: parsed[4] * 2 || 50000,
-            }
+            ps4: parsed.regular,
+            ps5: parsed.vip,
+            fortnite: DEFAULT_RATES.fortnite
           });
         }
       } catch (e) {
@@ -125,7 +128,7 @@ export default function App() {
     // Calculate costs for the log
     const durationMs = station.endTime - station.startTime;
     const durationHours = durationMs / (1000 * 60 * 60);
-    const categoryRates = station.isPremium ? rates.vip : rates.regular;
+    const categoryRates = station.type ? rates[station.type] : rates.ps4;
     const rate = categoryRates[station.playersCount as keyof typeof categoryRates] || 0;
     const playCost = Math.round(durationHours * rate);
     // Standard rounding could be applied if needed: Math.round(playCost / 250) * 250
@@ -165,8 +168,24 @@ export default function App() {
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl flex flex-col gap-12">
         {/* VIP Station (centered/large) */}
-        <div className="w-full max-w-4xl mx-auto">
-          {stations.filter(s => s.isPremium).map(station => (
+        <div className="w-full flex justify-center mb-4">
+          {stations.filter(s => s.type === 'ps5').map(station => (
+            <div key={station.id} className="w-full max-w-xl">
+              <StationCard 
+                station={station}
+                rates={rates}
+                onStartSession={handleStartSession}
+                onEndSession={handleEndSession}
+                onAddOrder={handleAddOrder}
+                onClearSession={handleClearSession}
+              />
+            </div>
+          ))}
+        </div>
+
+        {/* Regular Stations Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
+          {stations.filter(s => s.type === 'ps4' || !s.type).map(station => (
             <StationCard 
               key={station.id}
               station={station}
@@ -179,18 +198,19 @@ export default function App() {
           ))}
         </div>
 
-        {/* Regular Stations Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-8">
-          {stations.filter(s => !s.isPremium).map(station => (
-            <StationCard 
-              key={station.id}
-              station={station}
-              rates={rates}
-              onStartSession={handleStartSession}
-              onEndSession={handleEndSession}
-              onAddOrder={handleAddOrder}
-              onClearSession={handleClearSession}
-            />
+        {/* Fortnite Station (centered/large) */}
+        <div className="w-full flex justify-center mb-4">
+          {stations.filter(s => s.type === 'fortnite').map(station => (
+            <div key={station.id} className="w-full max-w-xl">
+              <StationCard 
+                station={station}
+                rates={rates}
+                onStartSession={handleStartSession}
+                onEndSession={handleEndSession}
+                onAddOrder={handleAddOrder}
+                onClearSession={handleClearSession}
+              />
+            </div>
           ))}
         </div>
       </main>
