@@ -6,8 +6,16 @@ import { SettingsModal } from './components/SettingsModal';
 import { LogModal } from './components/LogModal';
 import { Station, Rates, SessionLog, Order } from './types';
 
+import { InventoryItem, InventoryTransaction, DebtAccount, DebtTransaction } from './types';
+import { InventoryModal } from './components/InventoryModal';
+import { DebtModal } from './components/DebtModal';
+
 const STORAGE_KEY_RATES = 'matrex_rates';
 const STORAGE_KEY_LOGS = 'matrex_logs';
+const STORAGE_KEY_INVENTORY = 'matrex_inventory';
+const STORAGE_KEY_INVENTORY_TX = 'matrex_inventory_tx';
+const STORAGE_KEY_DEBTS = 'matrex_debts';
+const STORAGE_KEY_DEBTS_TX = 'matrex_debts_tx';
 
 const DEFAULT_RATES: Rates = {
   ps4: {
@@ -46,6 +54,14 @@ export default function App() {
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isLogsOpen, setIsLogsOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isDebtsOpen, setIsDebtsOpen] = useState(false);
+
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [inventoryTx, setInventoryTx] = useState<InventoryTransaction[]>([]);
+
+  const [debts, setDebts] = useState<DebtAccount[]>([]);
+  const [debtTxs, setDebtTxs] = useState<DebtTransaction[]>([]);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -76,6 +92,42 @@ export default function App() {
         console.error('Failed to parse logs', e);
       }
     }
+
+    const savedInventory = localStorage.getItem(STORAGE_KEY_INVENTORY);
+    if (savedInventory) {
+      try {
+        setInventory(JSON.parse(savedInventory));
+      } catch (e) {
+        console.error('Failed to parse inventory', e);
+      }
+    }
+
+    const savedInventoryTx = localStorage.getItem(STORAGE_KEY_INVENTORY_TX);
+    if (savedInventoryTx) {
+      try {
+        setInventoryTx(JSON.parse(savedInventoryTx));
+      } catch (e) {
+        console.error('Failed to parse inventory tx', e);
+      }
+    }
+
+    const savedDebts = localStorage.getItem(STORAGE_KEY_DEBTS);
+    if (savedDebts) {
+      try {
+        setDebts(JSON.parse(savedDebts));
+      } catch (e) {
+        console.error('Failed to parse debts', e);
+      }
+    }
+
+    const savedDebtTx = localStorage.getItem(STORAGE_KEY_DEBTS_TX);
+    if (savedDebtTx) {
+      try {
+        setDebtTxs(JSON.parse(savedDebtTx));
+      } catch (e) {
+        console.error('Failed to parse debt tx', e);
+      }
+    }
   }, []);
 
   // Save rates to localStorage when they change
@@ -88,6 +140,26 @@ export default function App() {
   const saveLogs = (newLogs: SessionLog[]) => {
     setLogs(newLogs);
     localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(newLogs));
+  };
+
+  const saveInventory = (newInv: InventoryItem[]) => {
+    setInventory(newInv);
+    localStorage.setItem(STORAGE_KEY_INVENTORY, JSON.stringify(newInv));
+  };
+
+  const saveInventoryTx = (newTx: InventoryTransaction[]) => {
+    setInventoryTx(newTx);
+    localStorage.setItem(STORAGE_KEY_INVENTORY_TX, JSON.stringify(newTx));
+  };
+
+  const saveDebts = (newDebts: DebtAccount[]) => {
+    setDebts(newDebts);
+    localStorage.setItem(STORAGE_KEY_DEBTS, JSON.stringify(newDebts));
+  };
+
+  const saveDebtTxs = (newTxs: DebtTransaction[]) => {
+    setDebtTxs(newTxs);
+    localStorage.setItem(STORAGE_KEY_DEBTS_TX, JSON.stringify(newTxs));
   };
 
   const clearLogs = () => {
@@ -119,6 +191,29 @@ export default function App() {
         ? { ...station, orders: [...station.orders, newOrder] }
         : station
     ));
+
+    // If order is from inventory, deduct stock and add log
+    if (orderData.itemId && orderData.quantity) {
+      const item = inventory.find(i => i.id === orderData.itemId);
+      if (item) {
+        // Find existing to update
+        const updatedInv = inventory.map(i => 
+          i.id === orderData.itemId ? { ...i, stock: i.stock - orderData.quantity! } : i
+        );
+        saveInventory(updatedInv);
+
+        const newTx: InventoryTransaction = {
+          id: Math.random().toString(36).substring(7),
+          itemId: item.id,
+          itemName: item.name,
+          type: 'out',
+          quantity: orderData.quantity,
+          totalPrice: orderData.price,
+          timestamp: Date.now()
+        };
+        saveInventoryTx([...inventoryTx, newTx]);
+      }
+    }
   };
 
   const handleClearSession = (id: number) => {
@@ -159,11 +254,38 @@ export default function App() {
     ));
   };
 
+  const handleClearSessionToDebt = (id: number, accountId: string, amount: number) => {
+    // Add cost to the account
+    const account = debts.find(d => d.id === accountId);
+    if (!account) return;
+
+    const updatedDebts = debts.map(d =>
+      d.id === accountId ? { ...d, balance: d.balance + amount } : d
+    );
+    saveDebts(updatedDebts);
+
+    const station = stations.find(s => s.id === id);
+    
+    const newTx: DebtTransaction = {
+      id: Math.random().toString(36).substring(7),
+      accountId,
+      amount,
+      description: `حساب جلسة ${station?.name || ''}`,
+      timestamp: Date.now()
+    };
+    saveDebtTxs([...debtTxs, newTx]);
+
+    // Finally, run clear session
+    handleClearSession(id);
+  };
+
   return (
     <div className="min-h-screen flex flex-col font-cairo">
       <Header 
         onOpenSettings={() => setIsSettingsOpen(true)} 
         onOpenLogs={() => setIsLogsOpen(true)} 
+        onOpenInventory={() => setIsInventoryOpen(true)}
+        onOpenDebts={() => setIsDebtsOpen(true)}
       />
 
       <main className="flex-1 container mx-auto px-4 py-8 max-w-7xl flex flex-col gap-12">
@@ -174,10 +296,13 @@ export default function App() {
               <StationCard 
                 station={station}
                 rates={rates}
+                inventory={inventory}
+                debts={debts}
                 onStartSession={handleStartSession}
                 onEndSession={handleEndSession}
                 onAddOrder={handleAddOrder}
                 onClearSession={handleClearSession}
+                onClearSessionToDebt={handleClearSessionToDebt}
               />
             </div>
           ))}
@@ -190,10 +315,13 @@ export default function App() {
               key={station.id}
               station={station}
               rates={rates}
+              inventory={inventory}
+              debts={debts}
               onStartSession={handleStartSession}
               onEndSession={handleEndSession}
               onAddOrder={handleAddOrder}
               onClearSession={handleClearSession}
+              onClearSessionToDebt={handleClearSessionToDebt}
             />
           ))}
         </div>
@@ -205,10 +333,13 @@ export default function App() {
               <StationCard 
                 station={station}
                 rates={rates}
+                inventory={inventory}
+                debts={debts}
                 onStartSession={handleStartSession}
                 onEndSession={handleEndSession}
                 onAddOrder={handleAddOrder}
                 onClearSession={handleClearSession}
+                onClearSessionToDebt={handleClearSessionToDebt}
               />
             </div>
           ))}
@@ -229,6 +360,24 @@ export default function App() {
         onClose={() => setIsLogsOpen(false)}
         logs={logs}
         onClearLogs={clearLogs}
+      />
+
+      <InventoryModal
+        isOpen={isInventoryOpen}
+        onClose={() => setIsInventoryOpen(false)}
+        inventory={inventory}
+        transactions={inventoryTx}
+        onSaveInventory={saveInventory}
+        onSaveTransactions={saveInventoryTx}
+      />
+
+      <DebtModal
+        isOpen={isDebtsOpen}
+        onClose={() => setIsDebtsOpen(false)}
+        debts={debts}
+        transactions={debtTxs}
+        onSaveDebts={saveDebts}
+        onSaveTransactions={saveDebtTxs}
       />
     </div>
   );

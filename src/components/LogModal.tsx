@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Clock, Trash2, Calendar, Target } from 'lucide-react';
 import { SessionLog } from '../types';
@@ -18,8 +19,14 @@ function formatDuration(ms: number) {
 }
 
 export function LogModal({ isOpen, onClose, logs, onClearLogs }: LogModalProps) {
-  const totalPlay = logs.reduce((acc, log) => acc + log.playCost, 0);
-  const totalOrders = logs.reduce((acc, log) => acc + log.ordersCost, 0);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState(todayStr);
+
+  const selectedDateObj = new Date(selectedDate);
+  const filteredLogs = logs.filter(log => new Date(log.startTime).toDateString() === selectedDateObj.toDateString());
+
+  const totalPlay = filteredLogs.reduce((acc, log) => acc + log.playCost, 0);
+  const totalOrders = filteredLogs.reduce((acc, log) => acc + log.ordersCost, 0);
   const grandTotal = totalPlay + totalOrders;
 
   return (
@@ -44,7 +51,7 @@ export function LogModal({ isOpen, onClose, logs, onClearLogs }: LogModalProps) 
             <div className="absolute bottom-0 left-0 w-96 h-96 bg-red-500/10 rounded-full blur-[100px] pointer-events-none" />
 
             {/* Header */}
-            <div className="flex-none flex items-center justify-between p-6 border-b border-white/5 relative z-10">
+            <div className="flex-none flex items-center justify-between p-6 border-b border-white/5 relative z-10 flex-wrap gap-4">
               <div className="flex items-center gap-4">
                 <div className="p-2 border border-blue-500/30 bg-blue-500/10 rounded-xl">
                   <Target className="w-6 h-6 text-blue-400" />
@@ -54,9 +61,19 @@ export function LogModal({ isOpen, onClose, logs, onClearLogs }: LogModalProps) 
                   <p className="text-xs text-blue-400 font-bold uppercase tracking-widest mt-1">Daily Log</p>
                 </div>
               </div>
-              <button onClick={onClose} className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">
-                <X className="w-6 h-6" />
-              </button>
+              
+              <div className="flex items-center gap-4">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-black/50 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-blue-500/50"
+                  style={{ colorScheme: 'dark' }}
+                />
+                <button onClick={onClose} className="p-2 rounded-xl text-zinc-500 hover:text-white hover:bg-white/10 transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             {/* Sticky Summaries */}
@@ -80,16 +97,16 @@ export function LogModal({ isOpen, onClose, logs, onClearLogs }: LogModalProps) 
 
             {/* Scrollable list */}
             <div className="flex-1 overflow-y-auto p-6 relative z-10 custom-scrollbar">
-              {logs.length === 0 ? (
+              {filteredLogs.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-zinc-500">
                   <div className="p-4 border border-white/5 rounded-full mb-4 bg-white/5">
                     <Calendar className="w-12 h-12 opacity-50" />
                   </div>
-                  <p className="text-lg font-bold tracking-widest uppercase">لا توجد عمليات مسجلة</p>
+                  <p className="text-lg font-bold tracking-widest uppercase">لا توجد عمليات مسجلة في هذا اليوم</p>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {logs.slice().reverse().map((log) => (
+                  {filteredLogs.slice().reverse().map((log) => (
                     <div key={log.id} className="bg-black/40 border border-white/5 p-5 rounded-2xl hover:border-white/20 transition-all hover:bg-white/5 group">
                       <div className="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-white/5">
                         <div className="flex items-center gap-4">

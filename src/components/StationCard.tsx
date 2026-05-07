@@ -1,16 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Gamepad2, Plus, Receipt, User, Users, Play, Square, Coffee, Clock } from 'lucide-react';
-import { Station, Order, Rates } from '../types';
+import { Station, Order, Rates, InventoryItem, DebtAccount } from '../types';
 
 interface StationCardProps {
   key?: string | number;
   station: Station;
   rates: Rates;
+  inventory: InventoryItem[];
+  debts: DebtAccount[];
   onStartSession: (id: number, playersCount: number) => void;
   onEndSession: (id: number) => void;
   onAddOrder: (id: number, order: Omit<Order, 'id'>) => void;
   onClearSession: (id: number) => void;
+  onClearSessionToDebt: (id: number, accountId: string, amount: number) => void;
 }
 
 function formatDuration(ms: number) {
@@ -21,11 +24,12 @@ function formatDuration(ms: number) {
   return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
 }
 
-export function StationCard({ station, rates, onStartSession, onEndSession, onAddOrder, onClearSession }: StationCardProps) {
+export function StationCard({ station, rates, inventory, debts, onStartSession, onEndSession, onAddOrder, onClearSession, onClearSessionToDebt }: StationCardProps) {
   const [playersSelection, setPlayersSelection] = useState<number>(1);
   const [currentTime, setCurrentTime] = useState(Date.now());
   const [newOrderName, setNewOrderName] = useState('');
   const [newOrderPrice, setNewOrderPrice] = useState('');
+  const [selectedItemId, setSelectedItemId] = useState('');
 
   // Update timer strictly every second when playing
   useEffect(() => {
@@ -41,7 +45,20 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
   };
 
   const handleAddOrder = () => {
-    if (newOrderName.trim() && newOrderPrice.trim() && !isNaN(Number(newOrderPrice))) {
+    if (selectedItemId) {
+      const item = inventory.find(i => i.id === selectedItemId);
+      if (item && item.stock > 0) {
+        onAddOrder(station.id, {
+          name: item.name,
+          price: item.price,
+          itemId: item.id,
+          quantity: 1
+        });
+        setSelectedItemId('');
+      } else {
+        alert('الكمية غير متوفرة في المخزون');
+      }
+    } else if (newOrderName.trim() && newOrderPrice.trim() && !isNaN(Number(newOrderPrice))) {
       onAddOrder(station.id, {
         name: newOrderName.trim(),
         price: Number(newOrderPrice)
@@ -210,28 +227,55 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
                 )}
               </div>
 
-              <div className="flex gap-2 bg-black/40 p-2 rounded-xl border border-white/10 backdrop-blur-md">
-                <input 
-                  type="text" 
-                  placeholder="اسم الطلب" 
-                  value={newOrderName}
-                  onChange={(e) => setNewOrderName(e.target.value)}
-                  className="flex-1 bg-transparent text-white px-3 py-2 text-sm focus:outline-none placeholder:text-zinc-600"
-                />
-                <div className="w-px bg-white/10 my-1" />
-                <input 
-                  type="number" 
-                  placeholder="السعر" 
-                  value={newOrderPrice}
-                  onChange={(e) => setNewOrderPrice(e.target.value)}
-                  className="w-24 bg-transparent text-white px-3 py-2 text-sm focus:outline-none placeholder:text-zinc-600 font-orbitron"
-                />
-                <button 
-                  onClick={handleAddOrder}
-                  className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-4 rounded-lg transition-colors border border-blue-500/30 flex items-center justify-center"
-                >
-                  <Plus className="w-5 h-5" />
-                </button>
+              <div className="flex flex-col gap-2">
+                {inventory && inventory.length > 0 && (
+                  <div className="flex gap-2 bg-black/40 p-2 rounded-xl border border-white/10 backdrop-blur-md">
+                    <select 
+                      value={selectedItemId}
+                      onChange={e => setSelectedItemId(e.target.value)}
+                      className="flex-1 bg-transparent text-white px-3 py-2 text-sm focus:outline-none appearance-none"
+                    >
+                      <option value="" className="text-black">-- اختيار من المخزون --</option>
+                      {inventory.map(item => (
+                        <option key={item.id} value={item.id} disabled={item.stock === 0} className="text-black">
+                          {item.name} - {item.price} ل.س (المتبقي: {item.stock})
+                        </option>
+                      ))}
+                    </select>
+                    <button 
+                      onClick={handleAddOrder}
+                      disabled={!selectedItemId}
+                      className="bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-400 px-4 rounded-lg transition-colors border border-emerald-500/30 flex items-center justify-center disabled:opacity-50"
+                    >
+                      <Plus className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+                
+                <div className="flex gap-2 bg-black/40 p-2 rounded-xl border border-white/10 backdrop-blur-md">
+                  <input 
+                    type="text" 
+                    placeholder="طلب مخصص" 
+                    value={newOrderName}
+                    onChange={(e) => setNewOrderName(e.target.value)}
+                    className="flex-1 bg-transparent text-white px-3 py-2 text-sm focus:outline-none placeholder:text-zinc-600"
+                  />
+                  <div className="w-px bg-white/10 my-1" />
+                  <input 
+                    type="number" 
+                    placeholder="السعر" 
+                    value={newOrderPrice}
+                    onChange={(e) => setNewOrderPrice(e.target.value)}
+                    className="w-24 bg-transparent text-white px-3 py-2 text-sm focus:outline-none placeholder:text-zinc-600 font-orbitron"
+                  />
+                  <button 
+                    onClick={handleAddOrder}
+                    disabled={!newOrderName.trim() || !newOrderPrice.trim()}
+                    className="bg-blue-500/20 hover:bg-blue-500/40 text-blue-400 px-4 rounded-lg transition-colors border border-blue-500/30 flex items-center justify-center disabled:opacity-50"
+                  >
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               <button
@@ -323,13 +367,36 @@ export function StationCard({ station, rates, onStartSession, onEndSession, onAd
                 </div>
               </div>
 
-              <button
-                onClick={() => onClearSession(station.id)}
-                className="group relative w-full flex items-center justify-center gap-3 py-4 rounded-xl font-bold tracking-widest uppercase overflow-hidden mt-2 border border-blue-500/30 hover:border-blue-500/60 transition-all bg-blue-500/10 hover:bg-blue-500/20"
-              >
-                <span className="text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">تصفير الجهاز وحفظ الفاتورة</span>
-                <Receipt className="w-5 h-5 text-blue-400" />
-              </button>
+              <div className="flex flex-col gap-2 mt-2">
+                <button
+                  onClick={() => onClearSession(station.id)}
+                  className="group relative w-full flex items-center justify-center gap-3 py-4 rounded-xl font-bold tracking-widest uppercase overflow-hidden border border-blue-500/30 hover:border-blue-500/60 transition-all bg-blue-500/10 hover:bg-blue-500/20"
+                >
+                  <span className="text-blue-400 drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">تصفير الجهاز (دفع نقدي)</span>
+                  <Receipt className="w-5 h-5 text-blue-400" />
+                </button>
+
+                {debts && debts.length > 0 && (
+                  <div className="flex gap-2">
+                    <select
+                      className="flex-1 bg-black/40 border border-purple-500/30 rounded-xl px-3 py-2 text-white outline-none focus:border-purple-500/50"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val) {
+                           onClearSessionToDebt(station.id, val, exactPlayCost + calculateTotalOrders());
+                           e.target.value = "";
+                        }
+                      }}
+                      defaultValue=""
+                    >
+                      <option value="" disabled className="text-black">تسجيل بالدين لفرد...</option>
+                      {debts.map(acc => (
+                        <option key={acc.id} value={acc.id} className="text-black">{acc.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
